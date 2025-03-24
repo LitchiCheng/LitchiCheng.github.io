@@ -1,0 +1,14 @@
+name: "Litchi.Cheng's blog"
+description: "Litchi.Cheng的个人技术博客"
+
+excerpt_separator: <!-- more -->
+
+footer-links:
+  BiliBili:
+    url: https://space.bilibili.com/399384226
+  email: 974782852@qq.com
+  github: LitchiCheng
+
+footer-text: Copyright (c) 2024 LitchiCheng
+
+url: https://LitchiCheng.github.io
