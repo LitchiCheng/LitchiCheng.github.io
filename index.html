@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LitchiCheng · 具身智能 / 机器人仿真 / 嵌入式</title>
+<meta name="description" content="LitchiCheng 的开源主页：MuJoCo 机器人仿真、ROS2、嵌入式 Linux、强化学习与大模型学习笔记。">
+<meta name="theme-color" content="#05070d">
+<meta property="og:title" content="LitchiCheng">
+<meta property="og:description" content="具身智能 · 机器人仿真 · 嵌入式 Linux · 开源学习笔记">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%2305070d'/><text x='16' y='23' font-size='17' font-family='monospace' text-anchor='middle' fill='%2322d3ee'>LC</text></svg>">
+<style>
+:root{
+  --bg:#05070d; --bg2:#080b14; --fg:#e7ecf5; --dim:#8b98b0; --line:rgba(255,255,255,.08);
+  --cy:#22d3ee; --vi:#a78bfa; --pk:#f472b6; --gd:linear-gradient(100deg,#22d3ee,#a78bfa 55%,#f472b6);
+  --mono:ui-monospace,"SFMono-Regular","JetBrains Mono",Menlo,Consolas,monospace;
+  --sans:system-ui,-apple-system,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--sans);line-height:1.65;overflow-x:hidden;-webkit-font-smoothing:antialiased}
+a{color:inherit;text-decoration:none}
+canvas#bg{position:fixed;inset:0;z-index:-2;display:block}
+.vignette{position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background:radial-gradient(1100px 700px at 15% -10%,rgba(34,211,238,.16),transparent 60%),
+             radial-gradient(900px 600px at 90% 10%,rgba(167,139,250,.14),transparent 60%),
+             radial-gradient(800px 800px at 50% 110%,rgba(244,114,182,.10),transparent 60%),
+             linear-gradient(180deg,rgba(5,7,13,.2),rgba(5,7,13,.85))}
+.grid-overlay{position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.35;
+  background-image:linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px);
+  background-size:64px 64px;mask-image:radial-gradient(ellipse at 50% 0%,#000 30%,transparent 75%)}
+.cursor-glow{position:fixed;width:520px;height:520px;left:0;top:0;z-index:-1;pointer-events:none;transform:translate(-50%,-50%);
+  background:radial-gradient(circle,rgba(34,211,238,.10),transparent 65%);transition:opacity .4s}
+.wrap{max-width:1180px;margin:0 auto;padding:0 24px}
+/* nav */
+header.nav{position:sticky;top:0;z-index:50;backdrop-filter:blur(14px) saturate(140%);
+  background:linear-gradient(180deg,rgba(5,7,13,.86),rgba(5,7,13,.42));border-bottom:1px solid var(--line)}
+.nav-inner{display:flex;align-items:center;gap:18px;height:62px}
+.brand{display:flex;align-items:center;gap:10px;font-family:var(--mono);font-weight:700;letter-spacing:.5px}
+.mono-mark{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;font-size:13px;color:#04070c;
+  background:var(--gd);box-shadow:0 0 22px rgba(34,211,238,.45)}
+.nav-links{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap}
+.nav-links a{font-size:14px;color:var(--dim);padding:7px 12px;border-radius:999px;border:1px solid transparent;transition:.25s}
+.nav-links a:hover{color:var(--fg);border-color:var(--line);background:rgba(255,255,255,.04)}
+.nav-cta{font-family:var(--mono);font-size:13px;padding:7px 14px;border-radius:999px;border:1px solid rgba(34,211,238,.4);
+  background:rgba(34,211,238,.08);color:#bff3ff;transition:.25s}
+.nav-cta:hover{box-shadow:0 0 24px rgba(34,211,238,.35);transform:translateY(-1px)}
+/* hero */
+.hero{position:relative;padding:92px 0 56px}
+.term{font-family:var(--mono);font-size:13.5px;color:var(--dim);border:1px solid var(--line);border-radius:12px;
+  padding:12px 16px;background:rgba(8,11,20,.6);max-width:660px;box-shadow:0 20px 60px -30px rgba(0,0,0,.9)}
+.term .p{color:var(--cy)}
+.term .out{color:#cbd5e1;margin-top:4px}
+.caret{display:inline-block;width:8px;height:15px;background:var(--cy);vertical-align:-2px;animation:blink 1.05s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+h1.glitch{position:relative;font-size:clamp(46px,10vw,104px);line-height:1;margin:26px 0 10px;font-weight:800;letter-spacing:-.02em;
+  background:var(--gd);-webkit-background-clip:text;background-clip:text;color:transparent}
+h1.glitch::before,h1.glitch::after{content:attr(data-text);position:absolute;left:0;top:0;width:100%;
+  background:inherit;-webkit-background-clip:text;background-clip:text;color:transparent;opacity:0;pointer-events:none}
+h1.glitch.go::before{opacity:.85;transform:translate(-3px,2px);clip-path:inset(20% 0 55% 0)}
+h1.glitch.go::after{opacity:.85;transform:translate(3px,-2px);clip-path:inset(60% 0 15% 0)}
+.tagline{font-family:var(--mono);font-size:clamp(14px,2.2vw,19px);color:#aebacd;letter-spacing:.06em;min-height:1.6em}
+.tagline b{color:var(--fg);font-weight:600}
+.hero-btns{display:flex;gap:12px;flex-wrap:wrap;margin-top:26px}
+.btn{font-family:var(--mono);font-size:14px;padding:11px 18px;border-radius:12px;border:1px solid var(--line);
+  background:rgba(255,255,255,.03);transition:.25s;position:relative;overflow:hidden}
+.btn:hover{transform:translateY(-2px);border-color:rgba(255,255,255,.22)}
+.btn.primary{background:var(--gd);color:#05070d;font-weight:700;border:none;box-shadow:0 10px 40px -12px rgba(167,139,250,.7)}
+.btn.ghost:hover{box-shadow:0 0 26px -6px rgba(34,211,238,.6)}
+/* stats */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin:52px 0 8px}
+.stat{border:1px solid var(--line);border-radius:16px;padding:18px 20px;background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.012));
+  position:relative;overflow:hidden}
+.stat::after{content:"";position:absolute;inset:0;background:var(--gd);opacity:0;transition:.4s}
+.stat:hover::after{opacity:.07}
+.stat .v{font-family:var(--mono);font-size:34px;font-weight:700;letter-spacing:-.02em}
+.stat .k{font-size:12.5px;color:var(--dim);letter-spacing:.14em;text-transform:uppercase;margin-top:2px}
+.stat .spark{position:absolute;right:14px;bottom:12px;opacity:.5}
+/* sections */
+section{padding:74px 0 10px;scroll-margin-top:70px}
+.sec-head{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:26px}
+.sec-head h2{font-size:clamp(24px,3.4vw,36px);margin:0;letter-spacing:-.01em}
+.sec-head .idx{font-family:var(--mono);color:var(--cy);font-size:14px;opacity:.8}
+.sec-head p{margin:0;color:var(--dim);font-size:15px}
+.reveal{opacity:0;transform:translateY(26px);transition:opacity .7s cubic-bezier(.2,.7,.2,1),transform .7s cubic-bezier(.2,.7,.2,1)}
+.reveal.in{opacity:1;transform:none}
+/* featured */
+.feat{display:grid;grid-template-columns:repeat(6,1fr);gap:16px}
+.card{grid-column:span 2;position:relative;border:1px solid var(--line);border-radius:18px;padding:20px 20px 18px;
+  background:linear-gradient(180deg,rgba(14,18,30,.9),rgba(8,11,20,.75));overflow:hidden;transition:transform .18s ease,border-color .3s,box-shadow .3s}
+.card:hover{border-color:rgba(34,211,238,.4);box-shadow:0 26px 70px -34px rgba(34,211,238,.55)}
+.card.wide{grid-column:span 6}
+.card .halo{position:absolute;width:340px;height:340px;right:-120px;top:-140px;border-radius:50%;
+  background:radial-gradient(circle,rgba(167,139,250,.25),transparent 65%);pointer-events:none}
+.card h3{margin:0 0 6px;font-family:var(--mono);font-size:18px;display:flex;align-items:center;gap:8px}
+.card.wide h3{font-size:24px}
+.card .desc{color:#b6c1d4;font-size:14.5px;margin:0 0 14px}
+.card.wide .desc{font-size:15.5px;max-width:70ch}
+.meta{display:flex;gap:16px;align-items:center;flex-wrap:wrap;font-family:var(--mono);font-size:12.5px;color:var(--dim)}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.03)}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+.stars{color:#ffd479}
+.card .go{position:absolute;right:16px;bottom:14px;font-family:var(--mono);color:var(--dim);transition:.25s}
+.card:hover .go{color:var(--cy);transform:translate(3px,-3px)}
+.rank{position:absolute;right:16px;top:15px;font-family:var(--mono);font-size:12px;letter-spacing:.1em;
+  color:var(--dim);opacity:.65}
+/* explorer */
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:18px}
+.search{flex:1;min-width:220px;font-family:var(--mono);font-size:14px;color:var(--fg);background:rgba(255,255,255,.04);
+  border:1px solid var(--line);border-radius:12px;padding:11px 14px;outline:none;transition:.25s}
+.search:focus{border-color:rgba(34,211,238,.5);box-shadow:0 0 0 3px rgba(34,211,238,.12)}
+.filters{display:flex;gap:8px;flex-wrap:wrap}
+.fbtn{font-family:var(--mono);font-size:12.5px;padding:8px 13px;border-radius:10px;border:1px solid var(--line);
+  background:transparent;color:var(--dim);cursor:pointer;transition:.2s}
+.fbtn:hover{color:var(--fg)}
+.fbtn.on{color:#05070d;background:var(--gd);border-color:transparent;font-weight:700}
+.rows{display:grid;gap:8px}
+.row{display:grid;grid-template-columns:minmax(180px,1.3fr) 96px 120px 84px 1fr;gap:12px;align-items:center;
+  border:1px solid var(--line);border-radius:12px;padding:11px 15px;background:rgba(255,255,255,.018);
+  font-family:var(--mono);font-size:13px;transition:.2s}
+.row:hover{background:rgba(34,211,238,.06);border-color:rgba(34,211,238,.35);transform:translateX(4px)}
+.row .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .nm .frk{color:var(--dim);font-size:11px}
+.row .cat{color:var(--dim);font-size:12px;text-align:right}
+.row .st{text-align:right;color:#ffd479}
+.row .lg{display:flex;align-items:center;gap:7px;color:var(--dim);font-size:12px}
+.row .ds{color:#9fb0c9;font-size:12.5px;font-family:var(--sans);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row.head{background:transparent;border:none;color:var(--dim);font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;padding:0 15px}
+.row.head:hover{transform:none;background:transparent;border:none}
+.empty{color:var(--dim);font-family:var(--mono);padding:20px 4px}
+/* stack */
+.stack{display:grid;grid-template-columns:1.05fr .95fr;gap:34px;align-items:start}
+.bars{display:grid;gap:15px}
+.bar{font-family:var(--mono);font-size:13px}
+.bar .lbl{display:flex;justify-content:space-between;color:#c3cfe2;margin-bottom:6px}
+.bar .track{height:8px;border-radius:999px;background:rgba(255,255,255,.06);overflow:hidden}
+.bar .fill{display:block;height:100%;width:0;border-radius:999px;background:var(--gd);transition:width 1.2s cubic-bezier(.2,.7,.2,1);
+  box-shadow:0 0 18px rgba(34,211,238,.55)}
+.langbox{border:1px solid var(--line);border-radius:18px;padding:22px;background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.01))}
+.langrow{display:grid;grid-template-columns:12px 90px 1fr 44px;gap:10px;align-items:center;font-family:var(--mono);font-size:12.5px;margin:9px 0}
+.langrow .lt{height:12px;border-radius:3px}
+.langrow .lb{height:6px;border-radius:999px;background:rgba(255,255,255,.07);overflow:hidden}
+.langrow .lb i{display:block;height:100%;width:0;transition:width 1s ease}
+.langrow .lv{text-align:right;color:var(--dim)}
+.legend{color:var(--dim);font-size:12.5px;font-family:var(--mono);margin-top:14px;border-top:1px dashed var(--line);padding-top:12px}
+/* timeline */
+.tl{position:relative;margin-left:8px;padding-left:26px;border-left:1px solid var(--line)}
+.tl-item{position:relative;padding:0 0 30px 6px}
+.tl-item::before{content:"";position:absolute;left:-33px;top:7px;width:12px;height:12px;border-radius:50%;
+  background:var(--bg);border:2px solid var(--cy);box-shadow:0 0 16px rgba(34,211,238,.7)}
+.tl-item .y{font-family:var(--mono);font-size:13px;color:var(--cy);letter-spacing:.1em}
+.tl-item h4{margin:2px 0 4px;font-size:17px}
+.tl-item p{margin:0;color:var(--dim);font-size:14.5px}
+.tl-item .rk{display:inline-block;margin-top:8px;font-family:var(--mono);font-size:12px;color:#9fb0c9;
+  border:1px solid var(--line);border-radius:8px;padding:3px 9px}
+/* contact */
+.contact{border:1px solid var(--line);border-radius:22px;padding:34px;margin-bottom:20px;position:relative;overflow:hidden;
+  background:linear-gradient(120deg,rgba(34,211,238,.10),rgba(167,139,250,.10) 50%,rgba(244,114,182,.10))}
+.contact::before{content:"";position:absolute;inset:-40%;background:conic-gradient(from 0deg,transparent 0 70%,rgba(34,211,238,.25) 80%,transparent 90%);
+  animation:spin 9s linear infinite;opacity:.5}
+.contact>*{position:relative}
+@keyframes spin{to{transform:rotate(360deg)}}
+.contact h3{margin:0 0 6px;font-size:26px}
+.contact p{margin:0 0 18px;color:#cbd5e1}
+.copy{font-family:var(--mono);font-size:14px;border:1px solid var(--line);background:rgba(5,7,13,.55);border-radius:12px;
+  padding:11px 16px;color:var(--fg);cursor:pointer;transition:.25s}
+.copy:hover{box-shadow:0 0 26px -6px rgba(34,211,238,.8)}
+footer{border-top:1px solid var(--line);padding:26px 0 44px;color:var(--dim);font-family:var(--mono);font-size:12.5px;
+  display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.toast{position:fixed;left:50%;bottom:34px;transform:translate(-50%,20px);opacity:0;pointer-events:none;
+  font-family:var(--mono);font-size:13px;background:rgba(8,11,20,.92);border:1px solid rgba(34,211,238,.45);
+  color:#bff3ff;padding:10px 16px;border-radius:12px;transition:.3s;z-index:99}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+@media (max-width:960px){
+  .stack{grid-template-columns:1fr}
+  .card{grid-column:span 3}
+  .row{grid-template-columns:1fr 78px 70px;font-size:12.5px}
+  .row .lg,.row .ds,.row.head{display:none}
+  .nav-links{display:none}
+}
+@media (max-width:640px){ .feat{grid-template-columns:1fr} .card,.card.wide{grid-column:span 1} }
+@media (scripting:none){ .reveal{opacity:1;transform:none} }
+@media (prefers-reduced-motion:reduce){ *{animation:none!important;transition:none!important} .reveal{opacity:1;transform:none} }
+</style>
+</head>
+<body>
+<canvas id="bg"></canvas>
+<div class="vignette"></div>
+<div class="grid-overlay"></div>
+<div class="cursor-glow" id="cglow"></div>
+<header class="nav">
+  <div class="wrap nav-inner">
+    <div class="brand"><span class="mono-mark">LC</span><span>LitchiCheng</span></div>
+    <nav class="nav-links">
+      <a href="#featured">精选项目</a>
+      <a href="#all">全部仓库</a>
+      <a href="#stack">技术栈</a>
+      <a href="#path">路线</a>
+      <a href="#contact">联系</a>
+    </nav>
+    <a class="nav-cta" href="https://github.com/LitchiCheng" target="_blank" rel="noopener">GitHub ↗</a>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <section class="hero" id="top">
+    <div class="term">
+      <div><span class="p">visitor@github-pages</span>:~$ <span id="typed"></span><span class="caret"></span></div>
+      <div class="out" id="typed-out">// 全部代码开源 · 每个知识点配可运行脚本</div>
+    </div>
+    <h1 class="glitch" id="title" data-text="LitchiCheng">LitchiCheng</h1>
+    <div class="tagline"><b id="rot">具身智能</b><span style="color:#7d8aa3"> / 机器人仿真 / 嵌入式 Linux</span> —— 把踩过的坑写成可运行的代码</div>
+    <div class="hero-btns">
+      <a class="btn primary" href="#featured">看看我在写什么 ↓</a>
+      <a class="btn ghost" href="https://github.com/LitchiCheng?tab=repositories" target="_blank" rel="noopener">71 个公开仓库</a>
+      <a class="btn ghost" href="mailto:974782852@qq.com">974782852@qq.com</a>
+    </div>
+    <div class="stats">
+      <div class="stat"><div class="v" data-count="1173" id="st-stars">0</div><div class="k">Stars 累计</div></div>
+      <div class="stat"><div class="v" data-count="66">0</div><div class="k">原创仓库</div></div>
+      <div class="stat"><div class="v" data-count="143">0</div><div class="k">Forks</div></div>
+      <div class="stat"><div class="v" data-count="70" data-suffix="+">0</div><div class="k">配套视频教程</div></div>
+      <div class="stat"><div class="v" data-count="171">0</div><div class="k">Followers</div></div>
+    </div>
+  </section>
+
+  <section id="featured">
+    <div class="sec-head">
+      <span class="idx">01 /</span><h2>精选项目</h2>
+      <p>按 star 排序的原创仓库 · 数字为 GitHub 实时值（页面打开后会尝试自动刷新）</p>
+    </div>
+    <div class="feat" id="feat"></div>
+  </section>
+
+  <section id="all">
+    <div class="sec-head">
+      <span class="idx">02 /</span><h2>全部仓库</h2>
+      <p>按 <kbd>/</kbd> 聚焦搜索，支持 star / 时间排序</p>
+    </div>
+    <div class="toolbar">
+      <input class="search" id="q" placeholder="grep -i 'mujoco | ros | stm32 | ...'" autocomplete="off">
+      <div class="filters" id="filters"></div>
+      <button class="fbtn" id="sortBtn" title="切换排序">sort: ★</button>
+    </div>
+    <div class="rows" id="rows"></div>
+  </section>
+
+  <section id="stack">
+    <div class="sec-head">
+      <span class="idx">03 /</span><h2>技术栈</h2>
+      <p>权重来自仓库分布与投入方向，不是自评百分比</p>
+    </div>
+    <div class="stack">
+      <div class="bars" id="bars"></div>
+      <div class="langbox">
+        <div style="font-family:var(--mono);font-size:13px;color:#c3cfe2;margin-bottom:10px">公开仓库语言分布 <span style="color:var(--dim)">/ 71 repos</span></div>
+        <div id="langs"></div>
+        <div class="legend">C / C++ 打底（驱动、上位机、性能）· Python 用于仿真与算法胶水 · Shell &amp; CMake 负责构建与板端部署</div>
+      </div>
+    </div>
+  </section>
+
+  <section id="path">
+    <div class="sec-head">
+      <span class="idx">04 /</span><h2>一条轨迹</h2>
+      <p>由公开仓库的时间线还原</p>
+    </div>
+    <div class="tl" id="tl"></div>
+  </section>
+
+  <section id="contact">
+    <div class="contact reveal">
+      <h3>说点什么</h3>
+      <p>关于仿真、驱动、机械臂控制或者某个坑怎么爬出来——邮件直达。</p>
+      <button class="copy" data-copy="974782852@qq.com">974782852@qq.com &nbsp;·&nbsp; 点击复制</button>
+      &nbsp;&nbsp;
+      <a class="copy" style="display:inline-block" href="https://github.com/LitchiCheng" target="_blank" rel="noopener">@LitchiCheng ↗</a>
+    </div>
+  </section>
+
+</main>
+<footer class="wrap">
+  <span>© <span id="yy">2026</span> LitchiCheng</span>
+  <span id="built">static · no tracking · no cookie</span>
+</footer>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ---------- 数据（构建自 GitHub API，随页面静态内置，运行时会自动刷新） ---------- */
+const USER = "LitchiCheng";
+const REPOS = [{"n": "mujoco-learning", "s": 946, "f": 101, "l": "Python", "u": "2026-08-23", "fork": false, "c": "机器人与仿真", "d": "MuJoCo 机器人仿真的系统化学习工程：RL 抓取与避障、MPC / 阻抗 / 导纳控制、KDL 与 Pinocchio 运动学、OMPL-RRT 与 TOPPRA 轨迹规划、AprilTag 视觉标定，一直到 sim2real 实机联动，每个点都配可运行脚本与视频讲解。"}, {"n": "ros2_package", "s": 105, "f": 8, "l": "C", "u": "2025-03-25", "fork": false, "c": "机器人与仿真", "d": "ROS2 功能包合集：多 URDF 同屏显示、MoveIt2 + Rviz + MuJoCo 三方联动仿真、SO-ARM100 / Panda 的控制器配置与一路踩坑记录。"}, {"n": "RV1106_Linux", "s": 36, "f": 9, "l": "C++", "u": "2024-05-31", "fork": false, "c": "嵌入式与硬件", "d": "RV1106 开发板的 Linux 侧验证：USB UVC 采集（实测 50Hz）、framebuffer 显示、内核配置与 dts 改动，附完整时间开销数据。"}, {"n": "mpu6050-linux", "s": 13, "f": 9, "l": "C", "u": "2021-05-06", "fork": false, "c": "嵌入式与硬件", "d": "给 MPU6050 写的 Linux 输入型驱动：dts 节点、原始 ADC 与实际值双读取的测试 demo。"}, {"n": "ESP8266-MIOT", "s": 12, "f": 1, "l": "C++", "u": "2021-05-09", "fork": false, "c": "嵌入式与硬件", "d": "ESP8266 接入米家生态的智能家居模块，电饭煲、继电器板控制代码与 Arduino 环境配置流程。"}, {"n": "DRL-learning", "s": 10, "f": 0, "l": "Python", "u": "2025-04-24", "fork": false, "c": "AI 与算法", "d": "深度强化学习实践：DQN 玩 2048（含 PyGame 可视化环境）、CartPole / Box2D 等 gym 任务与版本兼容性清单。"}, {"n": "SO-ARM100", "s": 9, "f": 1, "l": "Python", "u": "2026-08-30", "fork": false, "c": "机器人与仿真", "d": "SO-ARM100 开源机械臂的实机测试：Feetech 舵机 SDK、标定位姿与控制协议要点。"}, {"n": "WH-L101", "s": 5, "f": 1, "l": "C", "u": "2020-03-27", "fork": false, "c": "嵌入式与硬件", "d": "Lora module"}, {"n": "Diff-Car", "s": 4, "f": 2, "l": "C", "u": "2021-07-24", "fork": false, "c": "机器人与仿真", "d": "With RT Thread"}, {"n": "PyQt_Modbus-Tcp-Tool", "s": 4, "f": 0, "l": "Python", "u": "2019-03-11", "fork": false, "c": "工具与语言", "d": "PyQt 编写的 Modbus-TCP 上位机调试工具，可用 PyInstaller 一键打成可执行文件。"}, {"n": "stm32f103_Combo", "s": 4, "f": 5, "l": "C", "u": "2024-02-13", "fork": false, "c": "嵌入式与硬件", "d": "STM32F103 外设例程合集：DMX512/RS485 灯带控制、SPI Flash 读写、外部中断、FreeRTOS 与 ESP8266 TCP。"}, {"n": "LLM-learning", "s": 3, "f": 0, "l": "Python", "u": "2026-07-19", "fork": false, "c": "AI 与算法", "d": "大模型与具身智能的代码精读：手写 ViT、自注意力实现，配合《大模型驱动的具身智能》一书的逐章复现。"}, {"n": "stm32f407_Combo", "s": 3, "f": 1, "l": "C", "u": "2020-05-15", "fork": false, "c": "嵌入式与硬件", "d": "testproj of the stm32f407ve"}, {"n": "FT4232H", "s": 2, "f": 1, "l": "C", "u": "2019-06-04", "fork": false, "c": "嵌入式与硬件", "d": "FT4232HL chip application"}, {"n": "riscv_milkv-duo", "s": 2, "f": 1, "l": "C", "u": "2023-07-23", "fork": false, "c": "嵌入式与硬件", "d": ""}, {"n": "Scrolling_Ploter", "s": 2, "f": 1, "l": "Python", "u": "2024-08-07", "fork": false, "c": "工具与语言", "d": ""}, {"n": "Src_Automatic-Test_Controller", "s": 2, "f": 0, "l": "Python", "u": "2023-06-21", "fork": false, "c": "工具与语言", "d": ""}, {"n": "Automated-Testing", "s": 1, "f": 0, "l": "Python", "u": "2019-01-25", "fork": false, "c": "工具与语言", "d": "Automated-Testing with python"}, {"n": "CMake_Tutorial", "s": 1, "f": 0, "l": "CMake", "u": "2024-03-05", "fork": false, "c": "工具与语言", "d": ""}, {"n": "Cplus_ToolClassCombo", "s": 1, "f": 0, "l": "C++", "u": "2020-02-13", "fork": false, "c": "工具与语言", "d": "C++ class of tool like txt, regex and so on ...."}, {"n": "Deeplearning", "s": 1, "f": 0, "l": "Python", "u": "2025-02-24", "fork": false, "c": "AI 与算法", "d": "Deepleaning test code"}, {"n": "DGX-Spark", "s": 1, "f": 0, "l": "Shell", "u": "2026-08-23", "fork": false, "c": "AI 与算法", "d": ""}, {"n": "jetson-image-builder", "s": 1, "f": 0, "l": "Shell", "u": "2024-09-15", "fork": false, "c": "嵌入式与硬件", "d": ""}, {"n": "OrbbecCam", "s": 1, "f": 0, "l": "C", "u": "2025-02-04", "fork": false, "c": "机器人与仿真", "d": "OrbbecCam Test"}, {"n": "Py_OnlineFund", "s": 1, "f": 0, "l": "Python", "u": "2020-02-15", "fork": false, "c": "工具与语言", "d": ""}, {"n": "python_Combo", "s": 1, "f": 0, "l": "Python", "u": "2021-10-08", "fork": false, "c": "工具与语言", "d": ""}, {"n": "RK356x_Linux", "s": 1, "f": 0, "l": "C", "u": "2024-08-06", "fork": false, "c": "嵌入式与硬件", "d": ""}, {"n": "stm32f4-spi-bootloader", "s": 1, "f": 1, "l": "C", "u": "2021-07-16", "fork": false, "c": "嵌入式与硬件", "d": ""}, {"n": "any_container-model-implement", "s": 0, "f": 0, "l": "C++", "u": "2018-09-17", "fork": false, "c": "工具与语言", "d": "to realize any container of data like register and so on"}, {"n": "bat_taskCheck", "s": 0, "f": 0, "l": "Batchfile", "u": "2018-08-23", "fork": false, "c": "工具与语言", "d": "A bat tool for check some task and print it's close time"}, {"n": "buttonrpc_cpp14", "s": 0, "f": 0, "l": "", "u": "2019-05-04", "fork": true, "c": "其他", "d": "几百行代码实现的modern c++ rpc library"}, {"n": "CCharLikeStr", "s": 0, "f": 0, "l": "C++", "u": "2019-06-30", "fork": false, "c": "工具与语言", "d": "make the char* 's function like the string class"}, {"n": "CMap", "s": 0, "f": 0, "l": "C++", "u": "2019-06-25", "fork": false, "c": "工具与语言", "d": "Map by C++(internal by c)"}, {"n": "code-management", "s": 0, "f": 0, "l": "", "u": "2021-04-10", "fork": false, "c": "工具与语言", "d": ""}, {"n": "Coding-Api-Test-Tool", "s": 0, "f": 0, "l": "Python", "u": "2022-06-04", "fork": false, "c": "工具与语言", "d": ""}, {"n": "Cplus_Any-Test", "s": 0, "f": 0, "l": "C++", "u": "2023-03-17", "fork": false, "c": "工具与语言", "d": ""}, {"n": "Cplus_CUdpSplitAndSplice", "s": 0, "f": 0, "l": "C++", "u": "2019-07-25", "fork": false, "c": "工具与语言", "d": "Cplus_CUdpSplitAndSplice"}, {"n": "cplus_general_utility", "s": 0, "f": 0, "l": "C++", "u": "2025-02-04", "fork": false, "c": "工具与语言", "d": "cplus_general_utility"}, {"n": "Cplus_Socket-tool", "s": 0, "f": 0, "l": "C++", "u": "2018-11-16", "fork": false, "c": "工具与语言", "d": "a socket in C++"}, {"n": "cpp-mcp", "s": 0, "f": 0, "l": "", "u": "2026-03-19", "fork": true, "c": "其他", "d": "Lightweight C++ MCP (Model Context Protocol) SDK"}, {"n": "crash-kdump-config-tool", "s": 0, "f": 0, "l": "Shell", "u": "2024-05-13", "fork": false, "c": "嵌入式与硬件", "d": ""}, {"n": "CUDA_Test", "s": 0, "f": 0, "l": "Cuda", "u": "2024-02-28", "fork": false, "c": "AI 与算法", "d": ""}, {"n": "Design-Pattern", "s": 0, "f": 0, "l": "Python", "u": "2020-08-16", "fork": false, "c": "工具与语言", "d": ""}, {"n": "email", "s": 0, "f": 0, "l": "Python", "u": "2020-03-02", "fork": false, "c": "工具与语言", "d": "send and recieve email"}, {"n": "FollowErrorMarker", "s": 0, "f": 0, "l": "Python", "u": "2021-09-05", "fork": false, "c": "工具与语言", "d": "Used to judge if there's a follow error with two data"}, {"n": "IEEE754_binary_encoder", "s": 0, "f": 0, "l": "", "u": "2015-12-01", "fork": true, "c": "其他", "d": "A C library for converting float and double values to binary"}, {"n": "imx-driver", "s": 0, "f": 0, "l": "C", "u": "2020-08-31", "fork": false, "c": "嵌入式与硬件", "d": ""}, {"n": "io-monitor", "s": 0, "f": 0, "l": "C", "u": "2023-06-04", "fork": false, "c": "嵌入式与硬件", "d": ""}, {"n": "learn-python3", "s": 0, "f": 0, "l": "", "u": "2019-10-30", "fork": true, "c": "其他", "d": "Learn Python 3 Sample Code"}, {"n": "LinuxModuleTest", "s": 0, "f": 0, "l": "C", "u": "2023-06-05", "fork": false, "c": "嵌入式与硬件", "d": ""}, {"n": "LitchiCheng.github.io", "s": 0, "f": 0, "l": "", "u": "2025-03-24", "fork": false, "c": "工具与语言", "d": ""}, {"n": "livox-sdk-test", "s": 0, "f": 0, "l": "", "u": "2023-10-31", "fork": false, "c": "机器人与仿真", "d": ""}, {"n": "MUSE-Pi-Pro-Learning", "s": 0, "f": 0, "l": "Shell", "u": "2025-05-14", "fork": false, "c": "机器人与仿真", "d": "MUSE-Pi-Pro-Learning"}, {"n": "oled-linux", "s": 0, "f": 1, "l": "C", "u": "2021-05-03", "fork": false, "c": "嵌入式与硬件", "d": "oled for linux"}, {"n": "OnlyFlight", "s": 0, "f": 0, "l": "C", "u": "2021-12-26", "fork": false, "c": "嵌入式与硬件", "d": ""}, {"n": "OpenCL-Optimalization-Test", "s": 0, "f": 0, "l": "C++", "u": "2024-06-16", "fork": false, "c": "AI 与算法", "d": ""}, {"n": "pshare", "s": 0, "f": 0, "l": "", "u": "2018-05-24", "fork": true, "c": "其他", "d": "pshare UPnP Playlist Browser"}, {"n": "PyQt-Speed-Controller", "s": 0, "f": 0, "l": "Python", "u": "2021-07-11", "fork": false, "c": "工具与语言", "d": ""}, {"n": "Python-Cplus-Rpc", "s": 0, "f": 0, "l": "C++", "u": "2023-03-01", "fork": false, "c": "工具与语言", "d": ""}, {"n": "pytorch-MNIST-test", "s": 0, "f": 0, "l": "Python", "u": "2024-04-18", "fork": false, "c": "AI 与算法", "d": ""}, {"n": "Redmine_Analysis", "s": 0, "f": 0, "l": "Python", "u": "2021-01-05", "fork": false, "c": "工具与语言", "d": "Redmine_Analysis"}, {"n": "rockchip-driver", "s": 0, "f": 0, "l": "Batchfile", "u": "2022-12-21", "fork": false, "c": "嵌入式与硬件", "d": ""}, {"n": "ros_canopen_test", "s": 0, "f": 0, "l": "C++", "u": "2022-11-13", "fork": false, "c": "工具与语言", "d": "test proj for ros_canopen in arm64 target board"}, {"n": "RT-thread_stm32f1_demo", "s": 0, "f": 0, "l": "C", "u": "2021-11-28", "fork": false, "c": "嵌入式与硬件", "d": "RT-thread_stm32f1_demo"}, {"n": "RT-thread_stm32f4_demo", "s": 0, "f": 0, "l": "C", "u": "2021-06-10", "fork": false, "c": "嵌入式与硬件", "d": ""}, {"n": "SRC_AUTOMATIC_TEST", "s": 0, "f": 0, "l": "C", "u": "2023-04-26", "fork": false, "c": "工具与语言", "d": ""}, {"n": "StepCounter", "s": 0, "f": 0, "l": "Python", "u": "2020-05-24", "fork": false, "c": "工具与语言", "d": ""}, {"n": "TI28069-Test", "s": 0, "f": 0, "l": "C", "u": "2023-03-26", "fork": false, "c": "嵌入式与硬件", "d": ""}, {"n": "ubuntu-system-builder", "s": 0, "f": 0, "l": "Shell", "u": "2024-07-17", "fork": false, "c": "嵌入式与硬件", "d": ""}, {"n": "velPlan", "s": 0, "f": 0, "l": "Python", "u": "2020-07-15", "fork": false, "c": "工具与语言", "d": "test"}, {"n": "vscode_cfg", "s": 0, "f": 0, "l": "", "u": "2019-06-27", "fork": false, "c": "工具与语言", "d": "VS code configuration file"}];
+const LIVE = {stars:1173, followers:171, repos:71, forks:143};
+const REDUCED = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+/* ---------- 滚动显现 ---------- */
+const io=new IntersectionObserver(es=>es.forEach(e=>{ if(e.isIntersecting){ e.target.classList.add("in");
+  e.target.querySelectorAll?.(".fill,.lb i").forEach(f=>f.style.width=f.dataset.w+"%");
+  if(e.target.dataset.count) countUp(e.target); io.unobserve(e.target);} }),{threshold:.15});
+function obs(){ document.querySelectorAll(".reveal:not(.in)").forEach(el=>io.observe(el));
+  document.querySelectorAll(".stat .v").forEach(el=>{ if(!el.dataset.done){el.dataset.done=1;io.observe(el);} }); }
+
+/* ---------- 背景：粒子网络 ---------- */
+(function(){
+  const c=document.getElementById("bg"), x=c.getContext("2d");
+  let w,h,ps=[],raf;
+  const N = innerWidth<700?46:96, D=150;
+  function rs(){ w=c.width=innerWidth*devicePixelRatio; h=c.height=innerHeight*devicePixelRatio;
+    c.style.width=innerWidth+"px"; c.style.height=innerHeight+"px"; }
+  function init(){ rs(); ps=[]; for(let i=0;i<N;i++) ps.push({
+      x:Math.random()*w, y:Math.random()*h, vx:(Math.random()-.5)*.14*devicePixelRatio,
+      vy:(Math.random()-.5)*.14*devicePixelRatio, r:(Math.random()*1.6+.5)*devicePixelRatio,
+      p:Math.random()*6.28 }); }
+  function draw(t){
+    x.clearRect(0,0,w,h);
+    for(const p of ps){ p.x+=p.vx; p.y+=p.vy; p.p+=.01;
+      if(p.x<0||p.x>w) p.vx*=-1; if(p.y<0||p.y>h) p.vy*=-1; }
+    const lim=D*devicePixelRatio;
+    for(let i=0;i<ps.length;i++) for(let j=i+1;j<ps.length;j++){
+      const a=ps[i],b=ps[j],dx=a.x-b.x,dy=a.y-b.y,d=Math.hypot(dx,dy);
+      if(d<lim){ x.strokeStyle="rgba(120,190,255,"+(0.13*(1-d/lim))+")"; x.lineWidth=1;
+        x.beginPath(); x.moveTo(a.x,a.y); x.lineTo(b.x,b.y); x.stroke(); } }
+    for(const p of ps){ const g=.5+.5*Math.sin(p.p);
+      x.fillStyle="rgba(150,225,255,"+(0.25+0.45*g)+")";
+      x.beginPath(); x.arc(p.x,p.y,p.r*(1+g*.4),0,6.283); x.fill(); }
+    raf=requestAnimationFrame(draw);
+  }
+  init(); if(REDUCED){ draw(0); cancelAnimationFrame(raf); } else raf=requestAnimationFrame(draw);
+  addEventListener("resize",()=>{cancelAnimationFrame(raf);init();if(!REDUCED)raf=requestAnimationFrame(draw);});
+})();
+
+/* ---------- 光标光晕 ---------- */
+(function(){ const g=document.getElementById("cglow");
+  addEventListener("pointermove",e=>{ g.style.left=e.clientX+"px"; g.style.top=e.clientY+"px"; },{passive:true}); })();
+
+/* ---------- 打字机 ---------- */
+(function(){
+  const cmds=["whoami","cat ~/notes/robotics.md","git log --oneline | head","ls ~/projects | wc -l"];
+  const outs=[
+    "LitchiCheng // 让机器动起来，并且说得清楚为什么动",
+    "仿真 ↔ 实机：sim2real 双向对齐，误差要能归因",
+    "1173 stars · 70+ 篇可运行教程 · 持续更新中",
+    "71 // 从 STM32 寄存器到 MuJoCo 物理引擎都在里面"];
+  let i=0,j=0,del=false; const el=document.getElementById("typed"), oe=document.getElementById("typed-out");
+  if(REDUCED){ el.textContent=cmds[0]; oe.textContent=outs[0]; return; }
+  (function step(){
+    const cur=cmds[i];
+    if(!del){ el.textContent=cur.slice(0,++j); if(j===cur.length){del=true; oe.textContent=outs[i]; return setTimeout(step,1700);} setTimeout(step,62); }
+    else { el.textContent=cur.slice(0,--j); if(j===0){del=false; i=(i+1)%cmds.length; oe.textContent=outs[i]; return setTimeout(step,260);} setTimeout(step,26); }
+  })();
+})();
+
+/* ---------- 标题故障 ---------- */
+(function(){ const h=document.getElementById("title");
+  const fire=()=>{ h.classList.add("go"); setTimeout(()=>h.classList.remove("go"),160); };
+  h.addEventListener("mouseenter",fire); if(!REDUCED) setInterval(()=>{ if(Math.random()>.72) fire(); },5200);
+  const r=document.getElementById("rot"), words=["具身智能","Sim2Real","机械臂控制","强化学习","运动学与轨迹规划","大模型 × 机器人","仿真里的每一次摔倒"];
+  let k=0; if(!REDUCED) setInterval(()=>{ k=(k+1)%words.length; r.style.opacity=0;
+    setTimeout(()=>{ r.textContent=words[k]; r.style.opacity=1; },220); },2600);
+  r.style.transition="opacity .22s"; })();
+
+/* ---------- 数字滚动 ---------- */
+function countUp(el){ const to=+el.dataset.count, sfx=el.dataset.suffix||"", t0=performance.now(), dur=1100;
+  (function s(t){ const p=Math.min(1,(t-t0)/dur), v=Math.round(to*(1-Math.pow(1-p,3)));
+    el.textContent=(v>=1000?(v/1000).toFixed(1)+"k":v)+sfx; if(p<1) requestAnimationFrame(s); })(t0); }
+
+/* ---------- 精选卡片 ---------- */
+const LANG_COLOR={Python:"#3572A5",C:"#555",Cplus:"#f34b7d","C++":"#f34b7d",Shell:"#89e051",Cuda:"#AE5133",CMake:"#DA3433",Java:"#b07219",Batchfile:"#8a3fc0",Markdown:"#083fa1",Go:"#00ADD8",None:"#6b7280","":""};
+function langDot(l){ return LANG_COLOR[l]||"#6b7280"; }
+function num(n){ return n>=1000?(n/1000).toFixed(1)+"k":(""+n); }
+function card(r,rank,wide){
+  const a=document.createElement("a");
+  a.href="https://github.com/"+USER+"/"+r.n; a.target="_blank"; a.rel="noopener";
+  a.className="card reveal"+(wide?" wide":""); a.dataset.name=r.n;
+  a.innerHTML=(rank?'<span class="rank">TOP '+rank+'</span>':'')+'<span class="halo"></span>'+
+    '<h3>'+r.n+'</h3>'+
+    '<p class="desc">'+(r.d||"（README 尚在撰写中，代码即文档）")+'</p>'+
+    '<div class="meta"><span class="stars">★ '+num(r.s)+'</span><span>⑂ '+r.f+'</span>'+
+    (r.l?'<span class="chip"><i class="dot" style="background:'+langDot(r.l)+'"></i>'+r.l+'</span>':'')+
+    '<span class="chip">'+r.c+'</span><span>'+r.u+'</span></div><span class="go">↗</span>';
+  tilt(a); return a;
+}
+function tilt(el){ if(REDUCED) return;
+  el.addEventListener("pointermove",e=>{ const b=el.getBoundingClientRect();
+    const rx=((e.clientY-b.top)/b.height-.5)*-4, ry=((e.clientX-b.left)/b.width-.5)*5;
+    el.style.transform="perspective(900px) rotateX("+rx+"deg) rotateY("+ry+"deg) translateY(-2px)"; },{passive:true});
+  el.addEventListener("pointerleave",()=>el.style.transform=""); }
+(function(){
+  const f=document.getElementById("feat");
+  const own=REPOS.filter(r=>!r.fork && r.s>0).sort((a,b)=>b.s-a.s);
+  const head=own[0]; if(head) f.appendChild(card(head,1,true));
+  own.slice(1,9).forEach((r,i)=>f.appendChild(card(r,i+2)));
+})();
+
+/* ---------- 全部仓库 ---------- */
+const state={q:"",cat:"全部",byStar:true};
+(function(){
+  const cats=["全部",...Array.from(new Set(REPOS.map(r=>r.c)))];
+  const fw=document.getElementById("filters");
+  cats.forEach((c,i)=>{ const b=document.createElement("button"); b.className="fbtn"+(i?"":" on"); b.textContent=c;
+    b.onclick=()=>{ state.cat=c; [...fw.children].forEach(x=>x.classList.toggle("on",x===b)); render(); };
+    fw.appendChild(b); });
+  const rows=document.getElementById("rows");
+  const head=document.createElement("div"); head.className="row head";
+  head.innerHTML="<span>repository</span><span style='text-align:right'>stars</span><span>language</span><span style='text-align:right'>updated</span><span>note</span>";
+  const box=document.createElement("div"); box.className="rows"; box.id="rowlist";
+  rows.appendChild(head); rows.appendChild(box);
+  document.getElementById("q").addEventListener("input",e=>{state.q=e.target.value.toLowerCase();render();});
+  document.getElementById("sortBtn").onclick=e=>{state.byStar=!state.byStar;e.target.textContent="sort: "+(state.byStar?"★":"date");render();};
+  addEventListener("keydown",e=>{ if(e.key==="/"&&document.activeElement.tagName!=="INPUT"){e.preventDefault();document.getElementById("q").focus();} });
+})();
+function render(){
+  const box=document.getElementById("rowlist"); box.innerHTML="";
+  let list=REPOS.filter(r=>(state.cat==="全部"||r.c===state.cat) &&
+    (r.n.toLowerCase().includes(state.q)||(r.d||"").toLowerCase().includes(state.q)||(r.l||"").toLowerCase().includes(state.q)));
+  list.sort(state.byStar? (a,b)=>b.s-a.s : (a,b)=>b.u.localeCompare(a.u));
+  if(!list.length){ box.innerHTML='<div class="empty">// no match · 0 results</div>'; return; }
+  list.slice(0,80).forEach(r=>{
+    const d=document.createElement("a"); d.href="https://github.com/"+USER+"/"+r.n; d.target="_blank"; d.rel="noopener";
+    d.className="row reveal";
+    d.innerHTML="<span class='nm'>"+r.n+(r.fork?" <span class='frk'>fork</span>":"")+"</span>"+
+      "<span class='st'>"+(r.s?("★ "+num(r.s)):"—")+"</span>"+
+      "<span class='lg'><i class='dot' style='background:"+langDot(r.l)+"'></i>"+(r.l||"—")+"</span>"+
+      "<span class='cat'>"+r.u+"</span>"+
+      "<span class='ds'>"+(r.d||"")+"</span>";
+    box.appendChild(d); });
+  obs();
+}
+render();
+
+/* ---------- 技术栈条 ---------- */
+const BARS=[["机器人仿真 · MuJoCo / MuJoCo+RL",94],["ROS2 · MoveIt2 / URDF 工具链",86],
+  ["嵌入式 Linux · 驱动 / 内核 / 板端部署",82],["C / C++ · 上位机、性能与协议栈",76],
+  ["Python · 算法、可视化与自动化测试",74],["控制 · 阻抗 / 导纳 / MPC / 轨迹规划",70],
+  ["深度学习 · RL / ViT / 大模型应用",58],["MCU · STM32 / RT-Thread / 现场总线",55]];
+(function(){ const w=document.getElementById("bars");
+  BARS.forEach(([t,v])=>{ const d=document.createElement("div"); d.className="bar reveal";
+    d.innerHTML="<div class='lbl'><span>"+t+"</span><span>"+v+"</span></div><div class='track'><i class='fill' data-w='"+v+"'></i></div>";
+    w.appendChild(d); }); })();
+const LANGS=(function(){ const m={}; REPOS.forEach(r=>{const k=r.l||"Other"; m[k]=(m[k]||0)+1;});
+  return Object.entries(m).sort((a,b)=>b[1]-a[1]).slice(0,8); })();
+(function(){ const w=document.getElementById("langs");
+  const mx=Math.max(...LANGS.map(l=>l[1]));
+  LANGS.forEach(([k,v])=>{ const d=document.createElement("div"); d.className="langrow";
+    d.innerHTML="<span class='lt' style='background:"+langDot(k)+"'></span><span style='color:#c3cfe2'>"+k+"</span>"+
+      "<span class='lb'><i data-w='"+Math.round(v/mx*100)+"' style='background:"+langDot(k)+"'></i></span>"+
+      "<span class='lv'>"+v+"</span>"; w.appendChild(d); }); })();
+
+/* ---------- 时间线 ---------- */
+const TL=[["2018","从 MCU 和轮子开始","STM32、差速小车、RT-Thread、Modbus 上位机；GitHub 上第一批公开仓库。","stm32f103_Combo · Diff-Car"],
+ ["2019","工具化的一年","把重复劳动写成脚本：自动化测试、PyQt 上位机、C++ 通用容器与 socket 封装。","PyQt_Modbus-Tcp-Tool · Automated-Testing"],
+ ["2020","往内核里钻","MPU6050 Linux 驱动、OLED 驱动、智能家居 ESP8266 × 米家，软硬打通。","mpu6050-linux · ESP8266-MIOT"],
+ ["2021","边缘与实时","RV1106 板端 Linux：UVC 采集实测 50Hz、framebuffer、内核配置与 dts 全链路。","RV1106_Linux"],
+ ["2023","多平台扩面","RISC-V（milkv-duo）、RK356x、FT4232H、CMake 工程化与 CUDA/OpenCL 试水。","riscv_milkv-duo · CUDA_Test"],
+ ["2025","转向机器人栈","ROS2 功能包体系化、SO-ARM100 实机、深度强化学习与大模型代码精读。","ros2_package · SO-ARM100 · LLM-learning"],
+ ["2026","具身智能主线","MuJoCo 单仓 900+ star：从仿真采集数据到 sim2real 实机控制，全程脚本 + 视频。","mujoco-learning"]];
+(function(){ const w=document.getElementById("tl");
+  TL.forEach(([y,t,p,rk])=>{ const d=document.createElement("div"); d.className="tl-item reveal";
+    d.innerHTML="<div class='y'>"+y+"</div><h4>"+t+"</h4><p>"+p+"</p><span class='rk'>"+rk+"</span>"; w.appendChild(d); }); })();
+
+
+/* ---------- 实时刷新 star ---------- */
+(async function(){
+  try{
+    const res=await fetch("https://api.github.com/users/"+USER+"/repos?per_page=100&sort=pushed",{headers:{Accept:"application/vnd.github+json"}});
+    if(!res.ok) throw 0; const d=await res.json();
+    const map={}; d.forEach(r=>map[r.name]={s:r.stargazers_count,f:r.forks_count,l:r.language||"",u:(r.pushed_at||"").slice(0,10)});
+    let tot=0, fc=0; REPOS.forEach(r=>{ const m=map[r.n]; if(m){r.s=m.s;r.f=m.f;r.u=m.u;} tot+=r.s; fc+=r.f; });
+    document.querySelectorAll("[data-name]").forEach(el=>{ const r=REPOS.find(x=>x.n===el.dataset.name);
+      if(r) el.querySelector(".stars").textContent="★ "+num(r.s); });
+    const st=document.getElementById("st-stars"); st.dataset.count=tot; st.textContent=num(tot);
+    document.getElementById("built").textContent="static · live from api.github.com · "+new Date().toISOString().slice(0,10);
+    render();
+  }catch(e){ /* 离线或被限流：静态快照照常显示 */ }
+})();
+
+/* ---------- 启动显现观察 ---------- */
+obs();
+
+/* ---------- 复制 / toast ---------- */
+function toast(t){ const el=document.getElementById("toast"); el.textContent=t; el.classList.add("on");
+  clearTimeout(el._t); el._t=setTimeout(()=>el.classList.remove("on"),1900); }
+document.querySelectorAll("[data-copy]").forEach(b=>b.onclick=()=>{
+  navigator.clipboard?.writeText(b.dataset.copy).then(()=>toast("已复制 · "+b.dataset.copy),()=>toast(b.dataset.copy)); });
+setTimeout(function(){ document.querySelectorAll(".fill,.lb i").forEach(function(f){ if(f.dataset.w) f.style.width=f.dataset.w+"%"; }); },900);
+document.getElementById("yy").textContent=new Date().getFullYear();
+</script>
+</body>
+</html>
